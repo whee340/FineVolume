@@ -215,18 +215,35 @@
                 android:layout_marginTop="14dp"
                 android:orientation="horizontal" />
 
-            <HorizontalScrollView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:scrollbars="none">
+                android:orientation="horizontal">
 
-                <LinearLayout
-                    android:id="@+id/toneChoices"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal" />
-            </HorizontalScrollView>
+                <Button
+                    android:id="@+id/pickMusic"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:minHeight="0dp"
+                    android:stateListAnimator="@null"
+                    android:text="@string/pick_music"
+                    android:textAllCaps="false"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/toneButton"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1.4"
+                    android:minHeight="0dp"
+                    android:stateListAnimator="@null"
+                    android:textAllCaps="false"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/toneFile"
@@ -236,19 +253,7 @@
                 android:ellipsize="middle"
                 android:maxLines="1"
                 android:textColor="@color/muted"
-                android:textSize="12sp"
-                android:visibility="gone" />
-
-            <Button
-                android:id="@+id/toneButton"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="10dp"
-                android:minHeight="0dp"
-                android:stateListAnimator="@null"
-                android:textAllCaps="false"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+                android:textSize="12sp" />
 
             <View
                 android:layout_width="match_parent"

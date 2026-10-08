@@ -1,5 +1,6 @@
 package tw.finevolume
 
+import kotlin.math.abs
 import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
@@ -43,7 +44,9 @@ object GainMath {
 
     fun pctText(g: Float): String {
         val pct = g * 100f
-        return if (pct < 10f) String.format("%.1f%%", pct) else "${pct.roundToInt()}%"
+        // 整數就不顯示小數點（2%），只有像 0.5% 這種才留一位小數
+        if (pct >= 10f || abs(pct - pct.roundToInt()) < 0.05f) return "${pct.roundToInt()}%"
+        return String.format("%.1f%%", pct)
     }
 
     fun dbText(g: Float): String =

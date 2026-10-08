@@ -51,9 +51,8 @@ class MainActivity : Activity() {
     private val presetButtons = mutableListOf<Button>()
     private lateinit var testTone: TestTone
     private lateinit var toneButton: Button
-    private lateinit var toneChoices: LinearLayout
+    private lateinit var pickMusic: Button
     private lateinit var toneFile: TextView
-    private val toneChips = mutableMapOf<ToneKind, Button>()
     private var toneSession = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,10 +79,12 @@ class MainActivity : Activity() {
         deviceList = findViewById(R.id.deviceList)
         testTone = TestTone(this)
         toneButton = findViewById(R.id.toneButton)
-        toneChoices = findViewById(R.id.toneChoices)
+        pickMusic = findViewById(R.id.pickMusic)
         toneFile = findViewById(R.id.toneFile)
         toneButton.setOnClickListener { toggleTone() }
-        buildToneChoices()
+        pickMusic.setOnClickListener { pickMusicFile() }
+        pickMusic.backgroundTintList = ColorStateList.valueOf(getColor(R.color.panel2))
+        pickMusic.setTextColor(getColor(R.color.fg))
         updateToneButton()
 
         buildPresets()
@@ -129,36 +130,11 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
-    private fun buildToneChoices() {
-        ToneKind.values().forEachIndexed { i, k ->
-            val b = Button(this).apply {
-                text = k.label
-                isAllCaps = false
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                minWidth = 0; minimumWidth = 0; minHeight = 0; minimumHeight = 0
-                setPadding(dp(14), 0, dp(14), 0)
-                stateListAnimator = null
-                setOnClickListener { chooseTone(k) }
-            }
-            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(40))
-            if (i > 0) lp.marginStart = dp(6)
-            toneChoices.addView(b, lp)
-            toneChips[k] = b
-        }
-    }
-
-    private fun chooseTone(k: ToneKind) {
-        if (k == ToneKind.FILE) {
-            // 每次點「自選音樂」都讓使用者重新挑檔案
-            val pick = Intent(Intent.ACTION_OPEN_DOCUMENT)
-                .addCategory(Intent.CATEGORY_OPENABLE)
-                .setType("audio/*")
-            runCatching { startActivityForResult(pick, REQ_PICK_AUDIO) }
-            return
-        }
-        store.toneKind = k.id
-        if (testTone.isPlaying) playTone()
-        updateToneButton()
+    private fun pickMusicFile() {
+        val pick = Intent(Intent.ACTION_OPEN_DOCUMENT)
+            .addCategory(Intent.CATEGORY_OPENABLE)
+            .setType("audio/*")
+        runCatching { startActivityForResult(pick, REQ_PICK_AUDIO) }
     }
 
     @Deprecated("Activity result API")
@@ -168,7 +144,6 @@ class MainActivity : Activity() {
         val uri = data?.data ?: return
         runCatching { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
         store.toneUri = uri.toString()
-        store.toneKind = ToneKind.FILE.id
         playTone()
         updateToneButton()
     }
@@ -190,13 +165,12 @@ class MainActivity : Activity() {
 
     private fun playTone() {
         closeToneSession()
-        var kind = ToneKind.from(store.toneKind)
-        var session = testTone.start(kind, currentToneUri())
-        if (session == 0 && kind == ToneKind.FILE) {
-            // 檔案被刪除或沒有權限，退回預設的和弦
-            store.toneKind = ToneKind.CHORD.id
-            kind = ToneKind.CHORD
-            session = testTone.start(kind, null)
+        // 有選自己的音樂就播它，沒選（或檔案已刪除）就播預設和弦
+        val uri = currentToneUri()
+        var session = if (uri != null) testTone.start(ToneKind.FILE, uri) else 0
+        if (session == 0) {
+            if (uri != null) store.toneUri = null
+            session = testTone.start(ToneKind.CHORD, null)
         }
         toneSession = session
         // 相容模式下全域效果無效，把效果直接掛到測試音上
@@ -219,15 +193,8 @@ class MainActivity : Activity() {
         toneButton.text = getString(if (on) R.string.tone_stop else R.string.tone_play)
         toneButton.backgroundTintList = ColorStateList.valueOf(getColor(if (on) R.color.accent else R.color.panel2))
         toneButton.setTextColor(getColor(if (on) R.color.accentInk else R.color.fg))
-        val selected = ToneKind.from(store.toneKind)
-        toneChips.forEach { (k, b) ->
-            val sel = k == selected
-            b.backgroundTintList = ColorStateList.valueOf(getColor(if (sel) R.color.fg else R.color.panel2))
-            b.setTextColor(getColor(if (sel) R.color.bg else R.color.fg))
-        }
-        val name = if (selected == ToneKind.FILE) fileName(currentToneUri()) else null
-        toneFile.text = name?.let { "正在使用：$it" } ?: ""
-        toneFile.visibility = if (name != null) View.VISIBLE else View.GONE
+        val name = fileName(currentToneUri())
+        toneFile.text = name?.let { "測試音：$it" } ?: "測試音：預設和弦（按「自選音樂」換成你的歌）"
     }
 
     override fun onPause() {

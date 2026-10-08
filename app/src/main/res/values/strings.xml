@@ -13,5 +13,6 @@
     <string name="no_devices">還沒有記住任何裝置。接上耳機或藍牙裝置後會自動加入。</string>
     <string name="help" formatted="false">要比最小格更小聲：系統音量調到最小一格，再在這裡往下調。要更大聲：系統音量開到最大，再往上調並保持防爆音開啟。每個裝置第一次連上時預設 100%，之後會記住你上次的設定。</string>
     <string name="tone_play">▶ 播放測試音</string>
+    <string name="pick_music">自選音樂</string>
     <string name="tone_stop">■ 停止測試音</string>
 </resources>
