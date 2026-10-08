@@ -200,6 +200,17 @@ class VolumeService : Service() {
             c.startForegroundService(Intent(c, VolumeService::class.java))
         }
 
+        fun sendSession(c: Context, sessionId: Int, open: Boolean) {
+            if (!running || sessionId <= 0) return
+            runCatching {
+                c.startService(
+                    Intent(c, VolumeService::class.java)
+                        .setAction(if (open) ACTION_SESSION_OPEN else ACTION_SESSION_CLOSE)
+                        .putExtra(AudioEffect.EXTRA_AUDIO_SESSION, sessionId)
+                )
+            }
+        }
+
         fun send(c: Context, action: String) {
             if (running) runCatching { c.startService(Intent(c, VolumeService::class.java).setAction(action)) }
         }

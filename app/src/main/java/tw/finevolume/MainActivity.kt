@@ -46,6 +46,8 @@ class MainActivity : Activity() {
 
     private val presetValues = floatArrayOf(0.02f, 0.1f, 0.3f, 1f, 2f, 4f)
     private val presetButtons = mutableListOf<Button>()
+    private val testTone = TestTone()
+    private lateinit var toneButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +71,9 @@ class MainActivity : Activity() {
         limiterSwitch = findViewById(R.id.limiterSwitch)
         sysVolSwitch = findViewById(R.id.sysVolSwitch)
         deviceList = findViewById(R.id.deviceList)
+        toneButton = findViewById(R.id.toneButton)
+        toneButton.setOnClickListener { toggleTone() }
+        updateToneButton()
 
         buildPresets()
 
@@ -106,6 +111,34 @@ class MainActivity : Activity() {
         super.onResume()
         VolumeService.listener = { runOnUiThread { refresh() } }
         refresh()
+    }
+
+    override fun onDestroy() {
+        stopTone()
+        super.onDestroy()
+    }
+
+    private fun toggleTone() {
+        if (testTone.isPlaying) stopTone()
+        else {
+            val session = testTone.start()
+            // 相容模式下全域效果無效，把效果直接掛到測試音上
+            VolumeService.sendSession(this, session, open = true)
+        }
+        updateToneButton()
+    }
+
+    private fun stopTone() {
+        if (!testTone.isPlaying) return
+        testTone.stop()
+        updateToneButton()
+    }
+
+    private fun updateToneButton() {
+        val on = testTone.isPlaying
+        toneButton.text = getString(if (on) R.string.tone_stop else R.string.tone_play)
+        toneButton.backgroundTintList = ColorStateList.valueOf(getColor(if (on) R.color.accent else R.color.panel2))
+        toneButton.setTextColor(getColor(if (on) R.color.accentInk else R.color.fg))
     }
 
     override fun onPause() {

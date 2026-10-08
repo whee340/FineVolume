@@ -215,6 +215,17 @@
                 android:layout_marginTop="14dp"
                 android:orientation="horizontal" />
 
+            <Button
+                android:id="@+id/toneButton"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="10dp"
+                android:minHeight="0dp"
+                android:stateListAnimator="@null"
+                android:textAllCaps="false"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
