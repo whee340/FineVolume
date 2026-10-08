@@ -25,4 +25,5 @@
     <string name="access_usage">前景 App 偵測（使用情況存取權）</string>
     <string name="access_open">前往開啟</string>
     <string name="access_restricted">只用來判斷哪個 App 在播放，不會讀取通知內容。若設定頁顯示「受限設定」無法開啟：到 設定 → 應用程式 → 音量微調 → 右上角 ⋮ →「允許受限設定」，再回來開啟。</string>
+    <string name="no_apps">還沒有 App 單獨設定，在 App 播放時調整就會出現在這裡</string>
 </resources>

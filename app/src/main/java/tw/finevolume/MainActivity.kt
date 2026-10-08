@@ -49,6 +49,8 @@ class MainActivity : Activity() {
     /** 跟著目前裝置時，使用者選了「裝置預設」而不是目前 App */
     private var useDeviceDefault = false
     private var lastSeenApp: String? = null
+    /** 清單裡已展開的裝置 */
+    private val expanded = mutableSetOf<String>()
 
     private lateinit var accessCard: View
     private lateinit var mediaAccessState: TextView
@@ -416,46 +418,94 @@ class MainActivity : Activity() {
         devices.forEachIndexed { i, d ->
             if (i > 0) deviceList.addView(divider(), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)))
             val isCur = d.key == currentKey
-            val parts = mutableListOf(
-                if (d.enabled) "預設 ${GainMath.pctText(d.gain)}" else "原音",
-                if (d.limiter) "防爆音" else "無限幅",
-            )
-            if (store.rememberSysVolume && d.sysVolume >= 0) parts += "系統音量 ${d.sysVolume}"
+            val apps = store.appsFor(d.key)
+            val open = d.key in expanded
+            val parts = mutableListOf(if (d.enabled) "預設 ${GainMath.pctText(d.gain)}" else "原音")
+            if (apps.isNotEmpty()) parts += "${apps.size} 個 App"
+
+            // 裝置標題列：點一下展開／收合
             deviceList.addView(listRow(
                 title = d.name + if (isCur) "　· 使用中" else "",
                 sub = parts.joinToString(" · "),
                 indent = 0,
-                bold = d.key == editing,
-                deletable = !isCur,
+                bold = editing == d.key || editing.startsWith(d.key + ProfileStore.APP_SEP),
+                trailing = chevron(open),
+                onClick = {
+                    if (open) expanded -= d.key else expanded += d.key
+                    refresh()
+                },
+            ))
+            if (!open) return@forEachIndexed
+
+            // 展開後：裝置預設、各 App、刪除裝置
+            val defParts = mutableListOf(
+                if (d.enabled) "${GainMath.pctText(d.gain)}（${GainMath.dbText(d.gain)}）" else "原音",
+                if (d.limiter) "防爆音" else "無限幅",
+            )
+            if (store.rememberSysVolume && d.sysVolume >= 0) defParts += "系統音量 ${d.sysVolume}"
+            deviceList.addView(listRow(
+                title = "裝置預設",
+                sub = defParts.joinToString(" · "),
+                indent = 16,
+                bold = editing == d.key,
                 onClick = {
                     if (isCur) { pinnedDevice = null; pinnedApp = null; useDeviceDefault = true }
                     else { pinnedDevice = d.key; pinnedApp = null }
                     refresh()
                 },
-                onDelete = { store.delete(d.key); if (pinnedDevice == d.key) { pinnedDevice = null; pinnedApp = null } },
             ))
-            store.appsFor(d.key).forEach { a ->
+            apps.forEach { a ->
                 val live = isCur && a.app == liveApp
                 deviceList.addView(listRow(
                     title = a.appLabel.ifEmpty { a.app } + if (live) "　· 播放中" else "",
                     sub = "${GainMath.pctText(a.gain)}（${GainMath.dbText(a.gain)}）",
                     indent = 16,
                     bold = a.key == editing,
-                    deletable = true,
+                    trailing = deleteButton {
+                        store.delete(a.key)
+                        if (pinnedApp == a.app && pinnedDevice == d.key) pinnedApp = null
+                    },
                     onClick = {
                         if (live) { pinnedDevice = null; pinnedApp = null; useDeviceDefault = false }
                         else { pinnedDevice = d.key; pinnedApp = a.app }
                         refresh()
                     },
-                    onDelete = { store.delete(a.key); if (pinnedApp == a.app && pinnedDevice == d.key) pinnedApp = null },
                 ))
+            }
+            if (apps.isEmpty()) {
+                deviceList.addView(TextView(this).apply {
+                    text = getString(R.string.no_apps)
+                    setTextColor(getColor(R.color.muted))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setPadding(dp(32), dp(4), dp(16), dp(10))
+                })
+            }
+            if (!isCur) {
+                deviceList.addView(LinearLayout(this).apply {
+                    gravity = Gravity.END
+                    setPadding(0, 0, dp(8), dp(6))
+                    addView(deleteButton(label = "刪除這個裝置") {
+                        store.delete(d.key)
+                        expanded -= d.key
+                        if (pinnedDevice == d.key) { pinnedDevice = null; pinnedApp = null }
+                    })
+                })
             }
         }
     }
 
+    private fun chevron(open: Boolean) = TextView(this).apply {
+        text = if (open) "︿" else "﹀"
+        setTextColor(getColor(R.color.muted))
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+        gravity = Gravity.CENTER
+        minWidth = dp(40); minHeight = dp(40)
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+
     private fun listRow(
-        title: String, sub: String, indent: Int, bold: Boolean, deletable: Boolean,
-        onClick: () -> Unit, onDelete: () -> Unit,
+        title: String, sub: String, indent: Int, bold: Boolean,
+        trailing: View? = null, onClick: () -> Unit,
     ): View {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -470,7 +520,7 @@ class MainActivity : Activity() {
         }
         val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         texts.addView(TextView(this).apply {
-            text = if (indent > 0) "└ $title" else title
+            text = title
             setTextColor(getColor(R.color.fg))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (indent > 0) 14f else 15f)
             if (bold) setTypeface(typeface, Typeface.BOLD)
@@ -479,16 +529,15 @@ class MainActivity : Activity() {
             text = sub
             setTextColor(getColor(R.color.muted))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            if (indent > 0) setPadding(dp(14), 0, 0, 0)
         })
         row.addView(texts, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        if (deletable) row.addView(deleteButton(onDelete))
+        trailing?.let { row.addView(it) }
         return row
     }
 
     /** 兩段式刪除：先按一次變成「確定刪除」，再按一次才刪 */
-    private fun deleteButton(onDelete: () -> Unit) = TextView(this).apply {
-        text = "刪除"
+    private fun deleteButton(label: String = "刪除", onDelete: () -> Unit) = TextView(this).apply {
+        text = label
         setTextColor(getColor(R.color.muted))
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
         gravity = Gravity.CENTER
@@ -497,7 +546,7 @@ class MainActivity : Activity() {
         setOnClickListener {
             if (!armed) {
                 armed = true; text = "確定刪除"; setTextColor(getColor(R.color.boost))
-                postDelayed({ if (armed) { armed = false; text = "刪除"; setTextColor(getColor(R.color.muted)) } }, 3000)
+                postDelayed({ if (armed) { armed = false; text = label; setTextColor(getColor(R.color.muted)) } }, 3000)
             } else {
                 onDelete()
                 VolumeService.send(this@MainActivity, VolumeService.ACTION_APPLY)

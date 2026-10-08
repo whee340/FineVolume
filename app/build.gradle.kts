@@ -11,8 +11,8 @@ android {
         applicationId = "tw.finevolume"
         minSdk = 28          // DynamicsProcessing 需要 Android 9 以上
         targetSdk = 34
-        versionCode = 5
-        versionName = "2.0"
+        versionCode = 6
+        versionName = "2.1"
     }
 
     // 固定的簽章金鑰：每次重新編譯都能直接覆蓋安裝更新，設定不會被清掉
