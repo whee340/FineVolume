@@ -474,12 +474,5 @@
             android:background="@drawable/bg_panel"
             android:orientation="vertical" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/help"
-            android:textColor="@color/muted"
-            android:textSize="13sp" />
     </LinearLayout>
 </ScrollView>
