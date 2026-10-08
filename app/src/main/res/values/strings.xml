@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">音量微調</string>
+    <string name="status_on">執行中：切換裝置會自動套用設定</string>
+    <string name="status_off">已停止：打開右邊開關開始調整</string>
+    <string name="compat_note">這支手機不支援全域音效，已改用相容模式：只對會宣告音效工作階段的 App 有效（例如 Spotify、YouTube Music、多數音樂播放器）。在 App 開始播放後才會生效。</string>
+    <string name="back_to_current">回到目前裝置</string>
+    <string name="editing_other">正在編輯已記住的裝置，下次連上它時會套用</string>
+    <string name="enable_for_device">在這個裝置上啟用調整</string>
+    <string name="limiter">防爆音（放大時自動限幅）</string>
+    <string name="remember_sys_volume">同時記住每個裝置的系統音量</string>
+    <string name="saved_devices">已記住的裝置</string>
+    <string name="no_devices">還沒有記住任何裝置。接上耳機或藍牙裝置後會自動加入。</string>
+    <string name="help" formatted="false">要比最小格更小聲：系統音量調到最小一格，再在這裡往下調。要更大聲：系統音量開到最大，再往上調並保持防爆音開啟。每個裝置第一次連上時預設 100%，之後會記住你上次的設定。</string>
+</resources>

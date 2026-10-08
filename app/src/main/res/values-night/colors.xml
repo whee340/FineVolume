@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#111716</color>
+    <color name="panel">#1A2220</color>
+    <color name="panel2">#26302E</color>
+    <color name="fg">#E8EEEC</color>
+    <color name="muted">#93A29E</color>
+    <color name="line">#2B3633</color>
+    <color name="track">#26302E</color>
+    <color name="accent">#F0A040</color>
+    <color name="accentInk">#1A1206</color>
+    <color name="cut">#5BB3C1</color>
+    <color name="boost">#F07A63</color>
+    <color name="note">#3A2C17</color>
+</resources>
