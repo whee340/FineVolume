@@ -215,6 +215,30 @@
                 android:layout_marginTop="14dp"
                 android:orientation="horizontal" />
 
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/toneChoices"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <TextView
+                android:id="@+id/toneFile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:ellipsize="middle"
+                android:maxLines="1"
+                android:textColor="@color/muted"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
             <Button
                 android:id="@+id/toneButton"
                 android:layout_width="match_parent"

@@ -64,6 +64,14 @@ class ProfileStore(context: Context) {
         get() = prefs.getBoolean("serviceOn", false)
         set(v) { prefs.edit().putBoolean("serviceOn", v).apply() }
 
+    var toneKind: String?
+        get() = prefs.getString("toneKind", null)
+        set(v) { prefs.edit().putString("toneKind", v).apply() }
+
+    var toneUri: String?
+        get() = prefs.getString("toneUri", null)
+        set(v) { prefs.edit().putString("toneUri", v).apply() }
+
     var rememberSysVolume: Boolean
         get() = prefs.getBoolean("rememberSysVolume", true)
         set(v) { prefs.edit().putBoolean("rememberSysVolume", v).apply() }

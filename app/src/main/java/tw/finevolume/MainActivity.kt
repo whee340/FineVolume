@@ -2,10 +2,13 @@ package tw.finevolume
 
 import android.Manifest
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.media.AudioManager
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
@@ -46,8 +49,12 @@ class MainActivity : Activity() {
 
     private val presetValues = floatArrayOf(0.02f, 0.1f, 0.3f, 1f, 2f, 4f)
     private val presetButtons = mutableListOf<Button>()
-    private val testTone = TestTone()
+    private lateinit var testTone: TestTone
     private lateinit var toneButton: Button
+    private lateinit var toneChoices: LinearLayout
+    private lateinit var toneFile: TextView
+    private val toneChips = mutableMapOf<ToneKind, Button>()
+    private var toneSession = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,8 +78,12 @@ class MainActivity : Activity() {
         limiterSwitch = findViewById(R.id.limiterSwitch)
         sysVolSwitch = findViewById(R.id.sysVolSwitch)
         deviceList = findViewById(R.id.deviceList)
+        testTone = TestTone(this)
         toneButton = findViewById(R.id.toneButton)
+        toneChoices = findViewById(R.id.toneChoices)
+        toneFile = findViewById(R.id.toneFile)
         toneButton.setOnClickListener { toggleTone() }
+        buildToneChoices()
         updateToneButton()
 
         buildPresets()
@@ -118,19 +129,88 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
-    private fun toggleTone() {
-        if (testTone.isPlaying) stopTone()
-        else {
-            val session = testTone.start()
-            // 相容模式下全域效果無效，把效果直接掛到測試音上
-            VolumeService.sendSession(this, session, open = true)
+    private fun buildToneChoices() {
+        ToneKind.values().forEachIndexed { i, k ->
+            val b = Button(this).apply {
+                text = k.label
+                isAllCaps = false
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                minWidth = 0; minimumWidth = 0; minHeight = 0; minimumHeight = 0
+                setPadding(dp(14), 0, dp(14), 0)
+                stateListAnimator = null
+                setOnClickListener { chooseTone(k) }
+            }
+            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(40))
+            if (i > 0) lp.marginStart = dp(6)
+            toneChoices.addView(b, lp)
+            toneChips[k] = b
         }
+    }
+
+    private fun chooseTone(k: ToneKind) {
+        if (k == ToneKind.FILE) {
+            // 每次點「自選音樂」都讓使用者重新挑檔案
+            val pick = Intent(Intent.ACTION_OPEN_DOCUMENT)
+                .addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("audio/*")
+            runCatching { startActivityForResult(pick, REQ_PICK_AUDIO) }
+            return
+        }
+        store.toneKind = k.id
+        if (testTone.isPlaying) playTone()
         updateToneButton()
     }
 
+    @Deprecated("Activity result API")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQ_PICK_AUDIO || resultCode != RESULT_OK) return
+        val uri = data?.data ?: return
+        runCatching { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        store.toneUri = uri.toString()
+        store.toneKind = ToneKind.FILE.id
+        playTone()
+        updateToneButton()
+    }
+
+    private fun currentToneUri(): Uri? = store.toneUri?.let { runCatching { Uri.parse(it) }.getOrNull() }
+
+    private fun fileName(uri: Uri?): String? = uri?.let {
+        runCatching {
+            contentResolver.query(it, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else null
+            }
+        }.getOrNull()
+    }
+
+    private fun toggleTone() {
+        if (testTone.isPlaying) stopTone() else playTone()
+        updateToneButton()
+    }
+
+    private fun playTone() {
+        closeToneSession()
+        var kind = ToneKind.from(store.toneKind)
+        var session = testTone.start(kind, currentToneUri())
+        if (session == 0 && kind == ToneKind.FILE) {
+            // 檔案被刪除或沒有權限，退回預設的和弦
+            store.toneKind = ToneKind.CHORD.id
+            kind = ToneKind.CHORD
+            session = testTone.start(kind, null)
+        }
+        toneSession = session
+        // 相容模式下全域效果無效，把效果直接掛到測試音上
+        VolumeService.sendSession(this, session, open = true)
+    }
+
+    private fun closeToneSession() {
+        if (toneSession != 0) VolumeService.sendSession(this, toneSession, open = false)
+        toneSession = 0
+    }
+
     private fun stopTone() {
-        if (!testTone.isPlaying) return
         testTone.stop()
+        closeToneSession()
         updateToneButton()
     }
 
@@ -139,6 +219,15 @@ class MainActivity : Activity() {
         toneButton.text = getString(if (on) R.string.tone_stop else R.string.tone_play)
         toneButton.backgroundTintList = ColorStateList.valueOf(getColor(if (on) R.color.accent else R.color.panel2))
         toneButton.setTextColor(getColor(if (on) R.color.accentInk else R.color.fg))
+        val selected = ToneKind.from(store.toneKind)
+        toneChips.forEach { (k, b) ->
+            val sel = k == selected
+            b.backgroundTintList = ColorStateList.valueOf(getColor(if (sel) R.color.fg else R.color.panel2))
+            b.setTextColor(getColor(if (sel) R.color.bg else R.color.fg))
+        }
+        val name = if (selected == ToneKind.FILE) fileName(currentToneUri()) else null
+        toneFile.text = name?.let { "正在使用：$it" } ?: ""
+        toneFile.visibility = if (name != null) View.VISIBLE else View.GONE
     }
 
     override fun onPause() {
@@ -302,6 +391,10 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+    }
+
+    companion object {
+        private const val REQ_PICK_AUDIO = 2
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()

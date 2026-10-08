@@ -131,11 +131,18 @@ class VolumeService : Service() {
     }
 
     private fun createChannel() {
-        val ch = NotificationChannel(CHANNEL, "音量調整", NotificationManager.IMPORTANCE_LOW).apply {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        // 舊版用的是低重要性頻道（會被放到「靜音」區最下面），換成新頻道
+        runCatching { nm.deleteNotificationChannel("volume") }
+        val ch = NotificationChannel(CHANNEL, "音量調整（置頂）", NotificationManager.IMPORTANCE_DEFAULT).apply {
             description = "顯示目前裝置與音量，並提供快速調整"
+            setSound(null, null)
+            enableVibration(false)
+            enableLights(false)
             setShowBadge(false)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
-        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(ch)
+        nm.createNotificationChannel(ch)
     }
 
     private fun buildNotification(): Notification {
@@ -159,6 +166,11 @@ class VolumeService : Service() {
             .setContentIntent(open)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .setWhen(0)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setPriority(Notification.PRIORITY_MAX)
             .addAction(Notification.Action.Builder(null, "－ 小聲", act(ACTION_DOWN, 1)).build())
             .addAction(Notification.Action.Builder(null, "＋ 大聲", act(ACTION_UP, 2)).build())
             .addAction(Notification.Action.Builder(null, "停止", act(ACTION_STOP, 3)).build())
@@ -182,7 +194,7 @@ class VolumeService : Service() {
         const val ACTION_STOP = "tw.finevolume.STOP"
         const val ACTION_SESSION_OPEN = "tw.finevolume.SESSION_OPEN"
         const val ACTION_SESSION_CLOSE = "tw.finevolume.SESSION_CLOSE"
-        private const val CHANNEL = "volume"
+        private const val CHANNEL = "volume_top"
         private const val NOTIF_ID = 1
 
         @Volatile var running = false
