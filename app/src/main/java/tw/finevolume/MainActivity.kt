@@ -15,6 +15,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.Switch
@@ -68,7 +69,9 @@ class MainActivity : Activity() {
     private val presetButtons = mutableListOf<Button>()
     private lateinit var testTone: TestTone
     private lateinit var toneButton: Button
-    private lateinit var pickMusic: Button
+    private lateinit var pickMusic: View
+    private lateinit var deviceIcon: ImageView
+    private lateinit var deviceSection: TextView
     private lateinit var toneFile: TextView
     private var toneSession = 0
 
@@ -131,8 +134,8 @@ class MainActivity : Activity() {
         toneFile = findViewById(R.id.toneFile)
         toneButton.setOnClickListener { toggleTone() }
         pickMusic.setOnClickListener { pickMusicFile() }
-        pickMusic.backgroundTintList = ColorStateList.valueOf(getColor(R.color.panel2))
-        pickMusic.setTextColor(getColor(R.color.fg))
+        deviceIcon = findViewById(R.id.deviceIcon)
+        deviceSection = findViewById(R.id.deviceSection)
         updateToneButton()
 
         buildPresets()
@@ -239,10 +242,9 @@ class MainActivity : Activity() {
     private fun updateToneButton() {
         val on = testTone.isPlaying
         toneButton.text = getString(if (on) R.string.tone_stop else R.string.tone_play)
-        toneButton.backgroundTintList = ColorStateList.valueOf(getColor(if (on) R.color.accent else R.color.panel2))
-        toneButton.setTextColor(getColor(if (on) R.color.accentInk else R.color.fg))
-        val name = fileName(currentToneUri())
-        toneFile.text = name?.let { "測試音：$it" } ?: "測試音：預設和弦（按「自選音樂」換成你的歌）"
+        toneButton.backgroundTintList = ColorStateList.valueOf(getColor(if (on) R.color.panel2 else R.color.accent))
+        toneButton.setTextColor(getColor(if (on) R.color.accentText else R.color.accentInk))
+        toneFile.text = fileName(currentToneUri()) ?: "預設和弦"
     }
 
     override fun onPause() {
@@ -315,7 +317,9 @@ class MainActivity : Activity() {
         val d = s.device
         val pinned = pinnedDevice != null
         deviceName.text = d.name
-        deviceKind.text = if (d.key != cur.key) "已記住" else cur.kind.ifEmpty { "目前" }
+        deviceKind.text = if (d.key != cur.key) "已記住" else "${cur.kind.ifEmpty { "目前" }} · 使用中"
+        deviceIcon.setImageResource(if (d.key == "speaker") R.drawable.ic_speaker else R.drawable.ic_headphones)
+        deviceSection.text = d.name
         backToCurrent.visibility = if (pinned) View.VISIBLE else View.GONE
         editingNote.visibility = if (pinned) View.VISIBLE else View.GONE
 
@@ -350,7 +354,6 @@ class MainActivity : Activity() {
         tag.setTextColor(getColor(colorRes))
         pct.alpha = if (d.enabled) 1f else 0.4f
         seek.progress = GainMath.gainToPos(gain)
-        seek.progressTintList = ColorStateList.valueOf(getColor(if (gain > 1.001f) R.color.boost else R.color.cut))
         enabledSwitch.isChecked = d.enabled
         limiterSwitch.isChecked = d.limiter
         sysVolSwitch.isChecked = store.rememberSysVolume
@@ -366,8 +369,10 @@ class MainActivity : Activity() {
     }
 
     private fun styleToggle(b: Button, on: Boolean) {
-        b.backgroundTintList = ColorStateList.valueOf(getColor(if (on) R.color.fg else R.color.panel2))
-        b.setTextColor(getColor(if (on) R.color.bg else R.color.fg))
+        b.backgroundTintList = ColorStateList.valueOf(if (on) getColor(R.color.segmentSel) else 0x00000000)
+        b.setTextColor(getColor(R.color.fg))
+        b.elevation = if (on) dp(1).toFloat() else 0f
+        b.setTypeface(Typeface.DEFAULT, if (on) Typeface.BOLD else Typeface.NORMAL)
     }
 
     private fun refreshAccess() {
@@ -386,22 +391,27 @@ class MainActivity : Activity() {
         presetValues.forEachIndexed { i, v ->
             val b = Button(this).apply {
                 text = GainMath.pctText(v)
-                typeface = Typeface.MONOSPACE
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
                 isAllCaps = false
-                minWidth = 0; minimumWidth = 0
+                minWidth = 0; minimumWidth = 0; minHeight = 0; minimumHeight = 0
                 setPadding(0, 0, 0, 0)
                 stateListAnimator = null
+                setBackgroundResource(R.drawable.bg_r8)
                 setOnClickListener { editGain { v } }
             }
-            val lp = LinearLayout.LayoutParams(0, dp(44), 1f)
+            val lp = LinearLayout.LayoutParams(0, dp(34), 1f)
             if (i > 0) lp.marginStart = dp(6)
             presets.addView(b, lp)
             presetButtons += b
         }
     }
 
-    private fun divider() = View(this).apply { setBackgroundColor(getColor(R.color.line)) }
+    /** 分隔細線，indent = 左邊留白（dp） */
+    private fun hairline(indent: Int) {
+        val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, maxOf(1, dp(1) / 2))
+        lp.marginStart = dp(indent)
+        deviceList.addView(View(this).apply { setBackgroundColor(getColor(R.color.line)) }, lp)
+    }
 
     private fun renderDeviceList(currentKey: String, editing: String) {
         deviceList.removeAllViews()
@@ -410,20 +420,21 @@ class MainActivity : Activity() {
             deviceList.addView(TextView(this).apply {
                 text = getString(R.string.no_devices)
                 setTextColor(getColor(R.color.muted))
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
                 setPadding(dp(16), dp(14), dp(16), dp(14))
             })
             return
         }
         val liveApp = VolumeService.currentApp
         devices.forEachIndexed { i, d ->
-            if (i > 0) deviceList.addView(divider(), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)))
+            if (i > 0) hairline(16)
             val isCur = d.key == currentKey
             val apps = store.appsFor(d.key)
             val open = d.key in expanded
             val parts = mutableListOf(if (d.enabled) "預設 ${GainMath.pctText(d.gain)}" else "原音")
             if (apps.isNotEmpty()) parts += "${apps.size} 個 App"
 
-            // 裝置標題列：點一下展開／收合
+            // 裝置列：點一下展開／收合
             deviceList.addView(listRow(
                 title = d.name + if (isCur) "　· 使用中" else "",
                 sub = parts.joinToString(" · "),
@@ -438,14 +449,13 @@ class MainActivity : Activity() {
             if (!open) return@forEachIndexed
 
             // 展開後：裝置預設、各 App、刪除裝置
-            val defParts = mutableListOf(
-                if (d.enabled) "${GainMath.pctText(d.gain)}（${GainMath.dbText(d.gain)}）" else "原音",
-                if (d.limiter) "防爆音" else "無限幅",
-            )
+            val defParts = mutableListOf(if (d.limiter) "防爆音" else "無限幅")
             if (store.rememberSysVolume && d.sysVolume >= 0) defParts += "系統音量 ${d.sysVolume}"
+            hairline(32)
             deviceList.addView(listRow(
                 title = "裝置預設",
                 sub = defParts.joinToString(" · "),
+                value = if (d.enabled) GainMath.pctText(d.gain) else "原音",
                 indent = 16,
                 bold = editing == d.key,
                 onClick = {
@@ -456,9 +466,10 @@ class MainActivity : Activity() {
             ))
             apps.forEach { a ->
                 val live = isCur && a.app == liveApp
+                hairline(32)
                 deviceList.addView(listRow(
                     title = a.appLabel.ifEmpty { a.app } + if (live) "　· 播放中" else "",
-                    sub = "${GainMath.pctText(a.gain)}（${GainMath.dbText(a.gain)}）",
+                    value = GainMath.pctText(a.gain),
                     indent = 16,
                     bold = a.key == editing,
                     trailing = deleteButton {
@@ -473,17 +484,18 @@ class MainActivity : Activity() {
                 ))
             }
             if (apps.isEmpty()) {
+                hairline(32)
                 deviceList.addView(TextView(this).apply {
                     text = getString(R.string.no_apps)
                     setTextColor(getColor(R.color.muted))
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                    setPadding(dp(32), dp(4), dp(16), dp(10))
+                    setPadding(dp(32), dp(10), dp(16), dp(10))
                 })
             }
             if (!isCur) {
+                hairline(32)
                 deviceList.addView(LinearLayout(this).apply {
-                    gravity = Gravity.END
-                    setPadding(0, 0, dp(8), dp(6))
+                    setPadding(dp(24), 0, dp(8), 0)
                     addView(deleteButton(label = "刪除這個裝置") {
                         store.delete(d.key)
                         expanded -= d.key
@@ -494,24 +506,22 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun chevron(open: Boolean) = TextView(this).apply {
-        text = if (open) "︿" else "﹀"
-        setTextColor(getColor(R.color.muted))
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-        gravity = Gravity.CENTER
-        minWidth = dp(40); minHeight = dp(40)
+    private fun chevron(open: Boolean) = ImageView(this).apply {
+        setImageResource(if (open) R.drawable.ic_chev_up else R.drawable.ic_chev_down)
+        scaleType = ImageView.ScaleType.CENTER
+        minimumWidth = dp(32); minimumHeight = dp(32)
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
 
     private fun listRow(
-        title: String, sub: String, indent: Int, bold: Boolean,
+        title: String, sub: String? = null, value: String? = null, indent: Int, bold: Boolean,
         trailing: View? = null, onClick: () -> Unit,
     ): View {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16 + indent), dp(10), dp(8), dp(10))
-            minimumHeight = dp(52)
+            setPadding(dp(16 + indent), dp(9), dp(12), dp(9))
+            minimumHeight = dp(if (indent > 0) 46 else 58)
             isClickable = true
             setBackgroundResource(TypedValue().also {
                 theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true)
@@ -522,15 +532,21 @@ class MainActivity : Activity() {
         texts.addView(TextView(this).apply {
             text = title
             setTextColor(getColor(R.color.fg))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, if (indent > 0) 14f else 15f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, if (indent > 0) 15f else 17f)
             if (bold) setTypeface(typeface, Typeface.BOLD)
         })
-        texts.addView(TextView(this).apply {
+        if (sub != null) texts.addView(TextView(this).apply {
             text = sub
             setTextColor(getColor(R.color.muted))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
         })
         row.addView(texts, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        if (value != null) row.addView(TextView(this).apply {
+            text = value
+            setTextColor(getColor(R.color.muted))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            setPadding(dp(8), 0, dp(4), 0)
+        })
         trailing?.let { row.addView(it) }
         return row
     }
@@ -538,15 +554,15 @@ class MainActivity : Activity() {
     /** 兩段式刪除：先按一次變成「確定刪除」，再按一次才刪 */
     private fun deleteButton(label: String = "刪除", onDelete: () -> Unit) = TextView(this).apply {
         text = label
-        setTextColor(getColor(R.color.muted))
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        setTextColor(getColor(R.color.boost))
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
         gravity = Gravity.CENTER
         minWidth = dp(64); minHeight = dp(40)
         var armed = false
         setOnClickListener {
             if (!armed) {
-                armed = true; text = "確定刪除"; setTextColor(getColor(R.color.boost))
-                postDelayed({ if (armed) { armed = false; text = label; setTextColor(getColor(R.color.muted)) } }, 3000)
+                armed = true; text = "確定刪除"; setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+                postDelayed({ if (armed) { armed = false; text = label; setTypeface(Typeface.DEFAULT, Typeface.NORMAL) } }, 3000)
             } else {
                 onDelete()
                 VolumeService.send(this@MainActivity, VolumeService.ACTION_APPLY)

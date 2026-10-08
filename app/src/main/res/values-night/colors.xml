@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg">#111716</color>
-    <color name="panel">#1A2220</color>
-    <color name="panel2">#26302E</color>
-    <color name="fg">#E8EEEC</color>
-    <color name="muted">#93A29E</color>
-    <color name="line">#2B3633</color>
-    <color name="track">#26302E</color>
-    <color name="accent">#F0A040</color>
-    <color name="accentInk">#1A1206</color>
-    <color name="cut">#5BB3C1</color>
-    <color name="boost">#F07A63</color>
-    <color name="note">#3A2C17</color>
+    <color name="bg">#000000</color>
+    <color name="panel">#1C1C1E</color>
+    <color name="panel2">#2C2C2E</color>
+    <color name="segment">#2C2C2E</color>
+    <color name="fg">#FFFFFF</color>
+    <color name="muted">#98989F</color>
+    <color name="hint">#5A5A5F</color>
+    <color name="line">#38383A</color>
+    <color name="track">#3A3A3C</color>
+    <color name="accent">#1BAF78</color>
+    <color name="accentText">#3DD598</color>
+    <color name="accentInk">#FFFFFF</color>
+    <color name="toggleOn">#FFB542</color>
+    <color name="toggleOff">#39393D</color>
+    <color name="cut">#1BAF78</color>
+    <color name="boost">#FF6961</color>
+    <color name="note">#1C1C1E</color>
+    <color name="segmentSel">#5A5A5E</color>
 </resources>

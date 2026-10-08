@@ -6,19 +6,19 @@
     <string name="compat_note">這支手機不支援全域音效，已改用相容模式：只對會宣告音效工作階段的 App 有效（例如 Spotify、YouTube Music、多數音樂播放器）。在 App 開始播放後才會生效。</string>
     <string name="back_to_current">回到目前裝置</string>
     <string name="editing_other">正在編輯已記住的設定，下次遇到時會套用</string>
-    <string name="enable_for_device">在這個裝置上啟用調整</string>
-    <string name="limiter">防爆音（放大時自動限幅）</string>
-    <string name="remember_sys_volume">同時記住每個裝置的系統音量</string>
-    <string name="saved_devices">已記住的裝置與 App</string>
+    <string name="enable_for_device">啟用調整</string>
+    <string name="limiter">防爆音</string>
+    <string name="remember_sys_volume">記住系統音量</string>
+    <string name="saved_devices">已記住的裝置</string>
     <string name="no_devices">還沒有記住任何裝置。接上耳機或藍牙裝置後會自動加入。</string>
     <string name="help" formatted="false">要比最小格更小聲：系統音量調到最小一格，再在這裡往下調。要更大聲：系統音量開到最大，再往上調並保持防爆音開啟。每個裝置第一次連上時預設 100%，之後會記住你上次的設定。</string>
-    <string name="tone_play">▶ 播放測試音</string>
+    <string name="tone_play">▶ 播放</string>
     <string name="pick_music">自選音樂</string>
-    <string name="tone_stop">■ 停止測試音</string>
+    <string name="tone_stop">■ 停止</string>
     <string name="device_default">裝置預設</string>
     <string name="reset_app">改回裝置預設</string>
-    <string name="app_inherit">%1$s 還沒有單獨設定，目前沿用裝置預設；調整後會另外記住</string>
-    <string name="app_own">%1$s 在這個裝置上的單獨音量</string>
+    <string name="app_inherit">%1$s 目前沿用裝置預設，調整後會另外記住。</string>
+    <string name="app_own">%1$s 在這個裝置上的單獨音量。</string>
     <string name="access_title">開啟 App 個別音量</string>
     <string name="access_desc">讓每個 App 在每個裝置上各自記住音量。需要以下權限，App 才知道現在是誰在出聲。</string>
     <string name="access_media">媒體偵測（通知存取權）</string>
@@ -26,4 +26,5 @@
     <string name="access_open">前往開啟</string>
     <string name="access_restricted">只用來判斷哪個 App 在播放，不會讀取通知內容。若設定頁顯示「受限設定」無法開啟：到 設定 → 應用程式 → 音量微調 → 右上角 ⋮ →「允許受限設定」，再回來開啟。</string>
     <string name="no_apps">還沒有 App 單獨設定，在 App 播放時調整就會出現在這裡</string>
+    <string name="section_tone">測試音</string>
 </resources>

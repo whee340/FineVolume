@@ -6,6 +6,8 @@
         <item name="android:statusBarColor">@color/bg</item>
         <item name="android:navigationBarColor">@color/bg</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
         <item name="android:windowBackground">@color/bg</item>
+        <item name="android:colorControlHighlight">#1FFFFFFF</item>
     </style>
 </resources>

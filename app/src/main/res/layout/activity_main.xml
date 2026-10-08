@@ -9,75 +9,65 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="18dp"
-        android:paddingTop="24dp"
-        android:paddingBottom="32dp">
+        android:paddingHorizontal="16dp"
+        android:paddingTop="28dp"
+        android:paddingBottom="40dp">
 
-        <!-- 標題與總開關 -->
+        <!-- 大標題 + 總開關 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:paddingHorizontal="4dp">
 
-            <LinearLayout
+            <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/app_name"
-                    android:textColor="@color/fg"
-                    android:textSize="24sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/status"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/muted"
-                    android:textSize="14sp" />
-            </LinearLayout>
+                android:text="@string/app_name"
+                android:textColor="@color/fg"
+                android:textSize="34sp"
+                android:textStyle="bold" />
 
             <Switch
                 android:id="@+id/serviceSwitch"
+                style="@style/IosSwitch"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:minHeight="48dp"
-                android:thumbTint="@color/accent" />
+                android:contentDescription="總開關" />
         </LinearLayout>
 
         <TextView
-            android:id="@+id/compatNote"
-            android:layout_width="match_parent"
+            android:id="@+id/status"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/bg_note"
-            android:padding="12dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/compatNote"
+            style="@style/Card"
+            android:layout_marginTop="16dp"
+            android:padding="14dp"
             android:text="@string/compat_note"
             android:textColor="@color/fg"
             android:textSize="13sp"
             android:visibility="gone" />
 
-        <!-- App 個別音量需要的兩個權限 -->
+        <!-- 權限卡片 -->
         <LinearLayout
             android:id="@+id/accessCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:background="@drawable/bg_note"
+            style="@style/Card"
+            android:layout_marginTop="16dp"
             android:orientation="vertical"
-            android:padding="14dp">
+            android:padding="16dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/access_title"
                 android:textColor="@color/fg"
-                android:textSize="15sp"
+                android:textSize="17sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -85,104 +75,72 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/access_desc"
-                android:textColor="@color/fg"
+                android:textColor="@color/muted"
                 android:textSize="13sp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
+            <LinearLayout style="@style/AccessRow">
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/access_media"
                         android:textColor="@color/fg"
-                        android:textSize="14sp" />
-
+                        android:textSize="15sp" />
                     <TextView
                         android:id="@+id/mediaAccessState"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textSize="12sp" />
+                        android:textSize="13sp" />
                 </LinearLayout>
-
                 <Button
                     android:id="@+id/mediaAccessBtn"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:minHeight="0dp"
-                    android:paddingHorizontal="14dp"
-                    android:stateListAnimator="@null"
-                    android:text="@string/access_open"
-                    android:textAllCaps="false"
-                    android:textSize="13sp" />
+                    style="@style/PillButton"
+                    android:text="@string/access_open" />
             </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
+            <LinearLayout style="@style/AccessRow">
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical">
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/access_usage"
                         android:textColor="@color/fg"
-                        android:textSize="14sp" />
-
+                        android:textSize="15sp" />
                     <TextView
                         android:id="@+id/usageAccessState"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textSize="12sp" />
+                        android:textSize="13sp" />
                 </LinearLayout>
-
                 <Button
                     android:id="@+id/usageAccessBtn"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:minHeight="0dp"
-                    android:paddingHorizontal="14dp"
-                    android:stateListAnimator="@null"
-                    android:text="@string/access_open"
-                    android:textAllCaps="false"
-                    android:textSize="13sp" />
+                    style="@style/PillButton"
+                    android:text="@string/access_open" />
             </LinearLayout>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="12dp"
                 android:text="@string/access_restricted"
                 android:textColor="@color/muted"
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- 目前裝置 -->
+        <!-- 主卡片：目前裝置與音量 -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:background="@drawable/bg_panel"
+            style="@style/Card"
+            android:layout_marginTop="20dp"
             android:orientation="vertical"
-            android:padding="18dp">
+            android:padding="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -190,38 +148,50 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/deviceKind"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                <ImageView
+                    android:id="@+id/deviceIcon"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
                     android:background="@drawable/bg_chip"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="2dp"
-                    android:textColor="@color/muted"
-                    android:textSize="12sp" />
+                    android:importantForAccessibility="no"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_headphones" />
 
-                <TextView
-                    android:id="@+id/deviceName"
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="12dp"
                     android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:textColor="@color/fg"
-                    android:textSize="17sp"
-                    android:textStyle="bold" />
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/deviceName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="@color/fg"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/deviceKind"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/muted"
+                        android:textSize="13sp" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/backToCurrent"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:minHeight="40dp"
                     android:gravity="center"
-                    android:paddingHorizontal="8dp"
+                    android:minHeight="44dp"
+                    android:paddingStart="8dp"
                     android:text="@string/back_to_current"
-                    android:textColor="@color/accent"
-                    android:textSize="13sp"
+                    android:textColor="@color/accentText"
+                    android:textSize="15sp"
                     android:visibility="gone" />
             </LinearLayout>
 
@@ -229,81 +199,39 @@
                 android:id="@+id/editingNote"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="6dp"
                 android:text="@string/editing_other"
                 android:textColor="@color/muted"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:visibility="gone" />
 
-            <!-- 調整對象：目前的 App 或裝置預設 -->
+            <!-- 分段切換：目前的 App ／ 裝置預設 -->
             <LinearLayout
                 android:id="@+id/targetRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_segment"
                 android:orientation="horizontal"
+                android:padding="2dp"
                 android:visibility="gone">
 
                 <Button
                     android:id="@+id/targetApp"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:minHeight="0dp"
-                    android:stateListAnimator="@null"
-                    android:textAllCaps="false"
-                    android:textSize="14sp" />
+                    style="@style/SegmentButton" />
 
                 <Button
                     android:id="@+id/targetDevice"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:minHeight="0dp"
-                    android:stateListAnimator="@null"
-                    android:text="@string/device_default"
-                    android:textAllCaps="false"
-                    android:textSize="14sp" />
+                    style="@style/SegmentButton"
+                    android:layout_marginStart="2dp"
+                    android:text="@string/device_default" />
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/appNote"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textColor="@color/muted"
-                    android:textSize="12sp"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/resetApp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:minHeight="36dp"
-                    android:paddingHorizontal="8dp"
-                    android:text="@string/reset_app"
-                    android:textColor="@color/accent"
-                    android:textSize="13sp"
-                    android:visibility="gone" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="10dp"
                 android:baselineAligned="true"
-                android:gravity="bottom"
                 android:orientation="horizontal">
 
                 <TextView
@@ -311,168 +239,199 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:fontFamily="monospace"
+                    android:fontFeatureSettings="tnum"
+                    android:letterSpacing="-0.02"
                     android:textColor="@color/fg"
-                    android:textSize="52sp"
+                    android:textSize="56sp"
                     android:textStyle="bold" />
 
-                <LinearLayout
+                <TextView
+                    android:id="@+id/db"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:gravity="end"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/tag"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/bg_chip"
-                        android:paddingHorizontal="10dp"
-                        android:paddingVertical="2dp"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/db"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:fontFamily="monospace"
-                        android:textColor="@color/muted"
-                        android:textSize="15sp" />
-                </LinearLayout>
+                    android:fontFeatureSettings="tnum"
+                    android:textColor="@color/muted"
+                    android:textSize="15sp" />
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/tag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <!-- 細滑桿 + 兩旁的 − / + -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="6dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
                 <Button
                     android:id="@+id/down"
-                    style="@style/StepButton"
+                    style="@style/RoundStep"
                     android:contentDescription="降低音量"
                     android:text="−" />
 
                 <SeekBar
                     android:id="@+id/seek"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="44dp"
                     android:layout_weight="1"
                     android:max="1000"
-                    android:progressBackgroundTint="@color/track"
-                    android:progressTint="@color/cut"
-                    android:thumbTint="@color/accent" />
+                    android:paddingHorizontal="14dp"
+                    android:progressDrawable="@drawable/seek_track"
+                    android:splitTrack="false"
+                    android:thumb="@drawable/seek_thumb"
+                    android:thumbOffset="0dp" />
 
                 <Button
                     android:id="@+id/up"
-                    style="@style/StepButton"
+                    style="@style/RoundStep"
                     android:contentDescription="加大音量"
                     android:text="+" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="64dp"
-                android:orientation="horizontal">
-
-                <TextView style="@style/ScaleLabel" android:gravity="start" android:text="0" />
-                <TextView style="@style/ScaleLabel" android:gravity="center" android:text="100%" />
-                <TextView style="@style/ScaleLabel" android:gravity="end" android:text="400%" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/presets"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="12dp"
                 android:orientation="horizontal" />
+        </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/pickMusic"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:minHeight="0dp"
-                    android:stateListAnimator="@null"
-                    android:text="@string/pick_music"
-                    android:textAllCaps="false"
-                    android:textSize="15sp" />
-
-                <Button
-                    android:id="@+id/toneButton"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1.4"
-                    android:minHeight="0dp"
-                    android:stateListAnimator="@null"
-                    android:textAllCaps="false"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+        <!-- 卡片下方說明：這個 App 的單獨音量 / 改回裝置預設 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp">
 
             <TextView
-                android:id="@+id/toneFile"
-                android:layout_width="match_parent"
+                android:id="@+id/appNote"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:ellipsize="middle"
-                android:maxLines="1"
+                android:layout_weight="1"
                 android:textColor="@color/muted"
-                android:textSize="12sp" />
+                android:textSize="13sp"
+                android:visibility="gone" />
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginVertical="14dp"
-                android:background="@color/line" />
+            <TextView
+                android:id="@+id/resetApp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:minHeight="40dp"
+                android:paddingStart="8dp"
+                android:text="@string/reset_app"
+                android:textColor="@color/accentText"
+                android:textSize="13sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- 測試音：一列 -->
+        <TextView
+            style="@style/SectionHeader"
+            android:text="@string/section_tone" />
+
+        <LinearLayout
+            style="@style/Card"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingVertical="8dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="8dp">
+
+            <LinearLayout
+                android:id="@+id/pickMusic"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:minHeight="44dp"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_music" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pick_music"
+                        android:textColor="@color/fg"
+                        android:textSize="17sp" />
+
+                    <TextView
+                        android:id="@+id/toneFile"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="middle"
+                        android:maxLines="1"
+                        android:textColor="@color/muted"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/toneButton"
+                style="@style/PillButton"
+                android:layout_marginStart="8dp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 這個裝置的設定 -->
+        <TextView
+            android:id="@+id/deviceSection"
+            style="@style/SectionHeader" />
+
+        <LinearLayout
+            style="@style/Card"
+            android:orientation="vertical">
 
             <Switch
                 android:id="@+id/enabledSwitch"
-                style="@style/SettingSwitch"
+                style="@style/RowSwitch"
                 android:text="@string/enable_for_device" />
+
+            <View style="@style/Hairline" />
 
             <Switch
                 android:id="@+id/limiterSwitch"
-                style="@style/SettingSwitch"
+                style="@style/RowSwitch"
                 android:text="@string/limiter" />
-        </LinearLayout>
 
-        <Switch
-            android:id="@+id/sysVolSwitch"
-            style="@style/SettingSwitch"
-            android:layout_marginTop="12dp"
-            android:paddingHorizontal="4dp"
-            android:text="@string/remember_sys_volume" />
+            <View style="@style/Hairline" />
+
+            <Switch
+                android:id="@+id/sysVolSwitch"
+                style="@style/RowSwitch"
+                android:text="@string/remember_sys_volume" />
+        </LinearLayout>
 
         <!-- 已記住的裝置 -->
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:letterSpacing="0.08"
-            android:text="@string/saved_devices"
-            android:textColor="@color/muted"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            style="@style/SectionHeader"
+            android:text="@string/saved_devices" />
 
         <LinearLayout
             android:id="@+id/deviceList"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_panel"
+            style="@style/Card"
             android:orientation="vertical" />
-
     </LinearLayout>
 </ScrollView>
