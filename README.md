@@ -14,9 +14,8 @@ Android 9 以上可用。讓全系統媒體音量可以降到比最小格更小�
 ## 取得 APK（不用安裝任何開發工具）
 1. 在 GitHub 建一個新的 repository（可設為 Private）。
 2. 把這個資料夾所有檔案上傳（包含隱藏的 `.github` 資料夾）。網頁上傳時可把整個資料夾拖進去。
-3. 到 repository 的 **Actions** 分頁，等「Build APK」跑完（約 3–5 分鐘），若沒自動開始就按 **Run workflow**。
-4. 點進完成的那次執行，下方 **Artifacts** 下載 `FineVolume-apk`，解壓縮後得到 `FineVolume.apk`。
-5. 傳到手機安裝（需允許「安裝不明來源的應用程式」）。
+3. 每次推送後 GitHub 會自動編譯（約 3 分鐘），完成後發布到 Releases。
+4. 在手機瀏覽器打開 https://github.com/whee340/FineVolume/releases/latest/download/FineVolume.apk 下載安裝（需允許「安裝不明來源的應用程式」）。
 
 或用 Android Studio：File → Open 選這個資料夾 → Build → Build APK(s)。
 

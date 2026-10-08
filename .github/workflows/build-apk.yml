@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -27,7 +30,12 @@ jobs:
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk FineVolume.apk
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: FineVolume-apk
-          path: FineVolume.apk
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="build-${{ github.run_number }}"
+          gh release create "$TAG" FineVolume.apk \
+            --title "音量微調 第 ${{ github.run_number }} 版" \
+            --notes "在手機上下載 FineVolume.apk 安裝。可直接覆蓋舊版，設定會保留。" \
+            --latest
