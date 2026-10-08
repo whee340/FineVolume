@@ -20,7 +20,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 
-/** 常駐服務：保持音量效果，並在切換輸出裝置時自動套用該裝置的設定 */
+/** 常駐服務：保持音量效果，並在切換輸出裝置或 App 時自動套用對應的設定 */
 class VolumeService : Service() {
 
     private lateinit var am: AudioManager
@@ -28,6 +28,26 @@ class VolumeService : Service() {
     private val engine = GainEngine()
     private val handler = Handler(Looper.getMainLooper())
     private var ignoreVolumeUntil = 0L
+    private lateinit var detector: AppDetector
+
+    // 切換 App／裝置時平滑過渡音量，避免突然跳一下
+    private var appliedGain = -1f
+    private var rampStep = 0
+    private var rampFrom = 0f
+    private var rampTo = 0f
+    private val ramp = object : Runnable {
+        override fun run() {
+            rampStep++
+            val t = rampStep / RAMP_STEPS.toFloat()
+            val fromDb = GainMath.toDb(rampFrom).coerceAtLeast(-60f)
+            val toDb = GainMath.toDb(rampTo).coerceAtLeast(-60f)
+            val g = if (rampStep >= RAMP_STEPS) rampTo else Math.pow(10.0, ((fromDb + (toDb - fromDb) * t) / 20f).toDouble()).toFloat()
+            pushGain(g)
+            if (rampStep < RAMP_STEPS) handler.postDelayed(this, RAMP_INTERVAL_MS)
+        }
+    }
+    private var rampEnabled = true
+    private var rampLimiter = true
 
     private val deviceCallback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>) = scheduleDeviceCheck()
@@ -66,6 +86,12 @@ class VolumeService : Service() {
         val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(volumeReceiver, filter, RECEIVER_EXPORTED)
         else registerReceiver(volumeReceiver, filter)
+        detector = AppDetector(this, handler) { pkg ->
+            currentApp = pkg
+            currentAppLabel = pkg?.let { Access.appLabel(this, it) }
+            applyCurrent(smooth = true)
+        }
+        detector.start()
         checkDevice(force = true)
     }
 
@@ -81,7 +107,16 @@ class VolumeService : Service() {
                 val p = key?.let { store.get(it) }
                 if (p != null) {
                     val dir = if (intent.action == ACTION_UP) 1 else -1
-                    store.save(p.copy(gain = GainMath.nudge(p.gain, dir)))
+                    val app = currentApp
+                    if (app != null) {
+                        // 在某個 App 裡調整，就幫這個 App 另外記一筆
+                        val cur = store.getApp(p.key, app)
+                            ?: Profile(key = store.appKey(p.key, app), name = p.name, gain = p.gain,
+                                app = app, appLabel = currentAppLabel ?: app)
+                        store.save(cur.copy(gain = GainMath.nudge(cur.gain, dir), lastUsed = System.currentTimeMillis()))
+                    } else {
+                        store.save(p.copy(gain = GainMath.nudge(p.gain, dir)))
+                    }
                     applyCurrent()
                 }
             }
@@ -118,16 +153,31 @@ class VolumeService : Service() {
                 store.save(p)
             }
         }
-        applyCurrent()
+        applyCurrent(smooth = true)
     }
 
-    private fun applyCurrent() {
+    private fun applyCurrent(smooth: Boolean = false) {
         val key = currentKey ?: return
         val p = store.get(key) ?: return
-        engine.apply(p.gain, p.enabled, p.limiter)
+        val target = store.effectiveGain(p, currentApp)
+        // 記錄這個 App 最近一次使用時間（排序用）
+        store.getApp(p.key, currentApp)?.let { store.save(it.copy(lastUsed = System.currentTimeMillis())) }
+        handler.removeCallbacks(ramp)
+        rampEnabled = p.enabled; rampLimiter = p.limiter
+        if (smooth && appliedGain >= 0f && appliedGain != target && p.enabled) {
+            rampFrom = appliedGain; rampTo = target; rampStep = 0
+            handler.post(ramp)
+        } else {
+            pushGain(target)
+        }
         globalSupported = engine.globalSupported
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIF_ID, buildNotification())
         listener?.invoke()
+    }
+
+    private fun pushGain(g: Float) {
+        engine.apply(g, rampEnabled, rampLimiter)
+        appliedGain = g
     }
 
     private fun createChannel() {
@@ -147,10 +197,14 @@ class VolumeService : Service() {
 
     private fun buildNotification(): Notification {
         val p = currentKey?.let { store.get(it) }
+        val where = p?.let { d -> currentAppLabel?.let { "${d.name} · $it" } ?: d.name }
         val text = when {
             p == null -> "偵測輸出裝置中…"
-            !p.enabled -> "${p.name}：原音（未調整）"
-            else -> "${p.name}：${GainMath.pctText(p.gain)}（${GainMath.dbText(p.gain)}）"
+            !p.enabled -> "$where：原音（未調整）"
+            else -> {
+                val g = store.effectiveGain(p, currentApp)
+                "$where：${GainMath.pctText(g)}（${GainMath.dbText(g)}）"
+            }
         }
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
@@ -179,6 +233,9 @@ class VolumeService : Service() {
 
     override fun onDestroy() {
         running = false
+        currentApp = null
+        currentAppLabel = null
+        detector.stop()
         handler.removeCallbacksAndMessages(null)
         am.unregisterAudioDeviceCallback(deviceCallback)
         runCatching { unregisterReceiver(volumeReceiver) }
@@ -205,6 +262,13 @@ class VolumeService : Service() {
             private set
         @Volatile var globalSupported = true
             private set
+        /** 目前判斷在出聲的 App（套件名稱與名稱），null = 無法判斷 */
+        @Volatile var currentApp: String? = null
+            private set
+        @Volatile var currentAppLabel: String? = null
+            private set
+        private const val RAMP_STEPS = 10
+        private const val RAMP_INTERVAL_MS = 30L
         /** 主畫面註冊，狀態變化時更新畫面 */
         var listener: (() -> Unit)? = null
 

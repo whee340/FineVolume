@@ -43,8 +43,23 @@ class MainActivity : Activity() {
     private lateinit var sysVolSwitch: Switch
     private lateinit var deviceList: LinearLayout
 
-    /** 正在編輯的裝置；null = 跟著目前輸出裝置 */
-    private var editingKey: String? = null
+    /** 指定編輯某個已記住的裝置／App；null = 跟著目前的裝置與 App */
+    private var pinnedDevice: String? = null
+    private var pinnedApp: String? = null
+    /** 跟著目前裝置時，使用者選了「裝置預設」而不是目前 App */
+    private var useDeviceDefault = false
+    private var lastSeenApp: String? = null
+
+    private lateinit var accessCard: View
+    private lateinit var mediaAccessState: TextView
+    private lateinit var usageAccessState: TextView
+    private lateinit var mediaAccessBtn: Button
+    private lateinit var usageAccessBtn: Button
+    private lateinit var targetRow: View
+    private lateinit var targetApp: Button
+    private lateinit var targetDevice: Button
+    private lateinit var appNote: TextView
+    private lateinit var resetApp: TextView
     private var binding = false
 
     private val presetValues = floatArrayOf(0.02f, 0.1f, 0.3f, 1f, 2f, 4f)
@@ -77,6 +92,37 @@ class MainActivity : Activity() {
         limiterSwitch = findViewById(R.id.limiterSwitch)
         sysVolSwitch = findViewById(R.id.sysVolSwitch)
         deviceList = findViewById(R.id.deviceList)
+        accessCard = findViewById(R.id.accessCard)
+        mediaAccessState = findViewById(R.id.mediaAccessState)
+        usageAccessState = findViewById(R.id.usageAccessState)
+        mediaAccessBtn = findViewById(R.id.mediaAccessBtn)
+        usageAccessBtn = findViewById(R.id.usageAccessBtn)
+        targetRow = findViewById(R.id.targetRow)
+        targetApp = findViewById(R.id.targetApp)
+        targetDevice = findViewById(R.id.targetDevice)
+        appNote = findViewById(R.id.appNote)
+        resetApp = findViewById(R.id.resetApp)
+        mediaAccessBtn.setOnClickListener { runCatching { startActivity(Access.mediaSettingsIntent()) } }
+        usageAccessBtn.setOnClickListener { runCatching { startActivity(Access.usageSettingsIntent()) } }
+        listOf(mediaAccessBtn, usageAccessBtn).forEach {
+            it.backgroundTintList = ColorStateList.valueOf(getColor(R.color.accent))
+            it.setTextColor(getColor(R.color.accentInk))
+        }
+        targetApp.setOnClickListener {
+            if (pinnedDevice != null) { if (pinnedApp == null) pinnedApp = VolumeService.currentApp }
+            else useDeviceDefault = false
+            refresh()
+        }
+        targetDevice.setOnClickListener {
+            if (pinnedDevice != null) pinnedApp = null else useDeviceDefault = true
+            refresh()
+        }
+        resetApp.setOnClickListener {
+            val s = selection()
+            s.app?.let { store.delete(store.appKey(s.device.key, it)) }
+            VolumeService.send(this, VolumeService.ACTION_APPLY)
+            refresh()
+        }
         testTone = TestTone(this)
         toneButton = findViewById(R.id.toneButton)
         pickMusic = findViewById(R.id.pickMusic)
@@ -103,17 +149,17 @@ class MainActivity : Activity() {
 
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
-                if (fromUser) edit { it.copy(gain = GainMath.clamp(GainMath.posToGain(progress))) }
+                if (fromUser) editGain { GainMath.posToGain(progress) }
             }
             override fun onStartTrackingTouch(sb: SeekBar) {}
             override fun onStopTrackingTouch(sb: SeekBar) {}
         })
-        findViewById<Button>(R.id.down).setOnClickListener { edit { it.copy(gain = GainMath.nudge(it.gain, -1)) } }
-        findViewById<Button>(R.id.up).setOnClickListener { edit { it.copy(gain = GainMath.nudge(it.gain, 1)) } }
-        enabledSwitch.setOnCheckedChangeListener { _, v -> if (!binding) edit { it.copy(enabled = v) } }
-        limiterSwitch.setOnCheckedChangeListener { _, v -> if (!binding) edit { it.copy(limiter = v) } }
+        findViewById<Button>(R.id.down).setOnClickListener { editGain { g -> GainMath.nudge(g, -1) } }
+        findViewById<Button>(R.id.up).setOnClickListener { editGain { g -> GainMath.nudge(g, 1) } }
+        enabledSwitch.setOnCheckedChangeListener { _, v -> if (!binding) editDevice { it.copy(enabled = v) } }
+        limiterSwitch.setOnCheckedChangeListener { _, v -> if (!binding) editDevice { it.copy(limiter = v) } }
         sysVolSwitch.setOnCheckedChangeListener { _, v -> if (!binding) store.rememberSysVolume = v }
-        backToCurrent.setOnClickListener { editingKey = null; refresh() }
+        backToCurrent.setOnClickListener { pinnedDevice = null; pinnedApp = null; useDeviceDefault = false; refresh() }
 
         // 上次是開啟的，打開 App 時順手確保服務在跑
         if (store.serviceOn && !VolumeService.running) runCatching { VolumeService.start(this) }
@@ -210,15 +256,46 @@ class MainActivity : Activity() {
         } else DeviceResolver.current(am)
     }
 
-    private fun targetProfile(): Profile {
-        editingKey?.let { k -> store.get(k)?.let { return it } }
-        editingKey = null
+    /** 目前要編輯的「裝置 + App」；app = null 代表編輯裝置預設 */
+    private data class Selection(val device: Profile, val app: String?, val appLabel: String?)
+
+    private fun selection(): Selection {
+        val liveApp = VolumeService.currentApp
+        if (liveApp != lastSeenApp) { lastSeenApp = liveApp; useDeviceDefault = false }
+        pinnedDevice?.let { k ->
+            val d = store.get(k)
+            if (d != null) return Selection(d, pinnedApp, pinnedApp?.let { labelOf(d.key, it) })
+        }
+        pinnedDevice = null; pinnedApp = null
         val dev = currentDevice()
-        return store.getOrCreate(dev.key, dev.name)
+        val d = store.getOrCreate(dev.key, dev.name)
+        val app = if (useDeviceDefault) null else liveApp
+        return Selection(d, app, app?.let { labelOf(d.key, it) })
     }
 
-    private fun edit(change: (Profile) -> Profile) {
-        store.save(change(targetProfile()))
+    private fun labelOf(deviceKey: String, pkg: String): String =
+        store.getApp(deviceKey, pkg)?.appLabel?.takeIf { it.isNotEmpty() }
+            ?: VolumeService.currentAppLabel?.takeIf { pkg == VolumeService.currentApp }
+            ?: Access.appLabel(this, pkg)
+
+    /** 調整音量：選到 App 時存到這個 App（第一次會從裝置預設複製一份），否則存到裝置 */
+    private fun editGain(change: (Float) -> Float) {
+        val s = selection()
+        if (s.app != null) {
+            val cur = store.getApp(s.device.key, s.app)
+                ?: Profile(key = store.appKey(s.device.key, s.app), name = s.device.name, gain = s.device.gain,
+                    app = s.app, appLabel = s.appLabel ?: s.app)
+            store.save(cur.copy(gain = GainMath.clamp(change(cur.gain)), lastUsed = System.currentTimeMillis()))
+        } else {
+            store.save(s.device.copy(gain = GainMath.clamp(change(s.device.gain))))
+        }
+        VolumeService.send(this, VolumeService.ACTION_APPLY)
+        refresh()
+    }
+
+    /** 啟用／防爆音屬於裝置設定 */
+    private fun editDevice(change: (Profile) -> Profile) {
+        store.save(change(selection().device))
         VolumeService.send(this, VolumeService.ACTION_APPLY)
         refresh()
     }
@@ -229,40 +306,78 @@ class MainActivity : Activity() {
         serviceSwitch.isChecked = running
         status.text = if (running) getString(R.string.status_on) else getString(R.string.status_off)
         compatNote.visibility = if (running && !VolumeService.globalSupported) View.VISIBLE else View.GONE
+        refreshAccess()
 
         val cur = currentDevice()
-        val p = targetProfile()
-        val editingOther = p.key != cur.key
-        deviceName.text = p.name
-        deviceKind.text = if (editingOther) "已記住" else cur.kind.ifEmpty { "目前" }
-        backToCurrent.visibility = if (editingOther) View.VISIBLE else View.GONE
-        editingNote.visibility = if (editingOther) View.VISIBLE else View.GONE
+        val s = selection()
+        val d = s.device
+        val pinned = pinnedDevice != null
+        deviceName.text = d.name
+        deviceKind.text = if (d.key != cur.key) "已記住" else cur.kind.ifEmpty { "目前" }
+        backToCurrent.visibility = if (pinned) View.VISIBLE else View.GONE
+        editingNote.visibility = if (pinned) View.VISIBLE else View.GONE
 
-        pct.text = GainMath.pctText(p.gain)
-        db.text = GainMath.dbText(p.gain)
+        // App／裝置預設切換
+        val showApp = s.app != null || (!pinned && VolumeService.currentApp != null)
+        targetRow.visibility = if (showApp) View.VISIBLE else View.GONE
+        val appForButton = s.app ?: VolumeService.currentApp
+        val appProfile = store.getApp(d.key, s.app)
+        if (showApp && appForButton != null) {
+            targetApp.text = s.appLabel ?: labelOf(d.key, appForButton)
+            styleToggle(targetApp, s.app != null)
+            styleToggle(targetDevice, s.app == null)
+        }
+        appNote.visibility = if (s.app != null) View.VISIBLE else View.GONE
+        resetApp.visibility = if (appProfile != null) View.VISIBLE else View.GONE
+        appNote.text = when {
+            s.app == null -> ""
+            appProfile == null -> getString(R.string.app_inherit, s.appLabel)
+            else -> getString(R.string.app_own, s.appLabel)
+        }
+
+        val gain = appProfile?.gain ?: d.gain
+        pct.text = GainMath.pctText(gain)
+        db.text = GainMath.dbText(gain)
         val (label, colorRes) = when {
-            !p.enabled -> "未啟用" to R.color.muted
-            p.gain < 0.999f -> "降低" to R.color.cut
-            p.gain > 1.001f -> "放大" to R.color.boost
+            !d.enabled -> "未啟用" to R.color.muted
+            gain < 0.999f -> "降低" to R.color.cut
+            gain > 1.001f -> "放大" to R.color.boost
             else -> "原音" to R.color.muted
         }
         tag.text = label
         tag.setTextColor(getColor(colorRes))
-        pct.alpha = if (p.enabled) 1f else 0.4f
-        seek.progress = GainMath.gainToPos(p.gain)
-        seek.progressTintList = ColorStateList.valueOf(getColor(if (p.gain > 1.001f) R.color.boost else R.color.cut))
-        enabledSwitch.isChecked = p.enabled
-        limiterSwitch.isChecked = p.limiter
+        pct.alpha = if (d.enabled) 1f else 0.4f
+        seek.progress = GainMath.gainToPos(gain)
+        seek.progressTintList = ColorStateList.valueOf(getColor(if (gain > 1.001f) R.color.boost else R.color.cut))
+        enabledSwitch.isChecked = d.enabled
+        limiterSwitch.isChecked = d.limiter
         sysVolSwitch.isChecked = store.rememberSysVolume
 
         presetButtons.forEachIndexed { i, b ->
-            val on = abs(presetValues[i] - p.gain) < 0.0005f
+            val on = abs(presetValues[i] - gain) < 0.0005f
             b.backgroundTintList = ColorStateList.valueOf(getColor(if (on) R.color.accent else R.color.panel2))
             b.setTextColor(getColor(if (on) R.color.accentInk else R.color.fg))
         }
 
-        renderDeviceList(cur.key, p.key)
+        renderDeviceList(cur.key, appProfile?.key ?: d.key)
         binding = false
+    }
+
+    private fun styleToggle(b: Button, on: Boolean) {
+        b.backgroundTintList = ColorStateList.valueOf(getColor(if (on) R.color.fg else R.color.panel2))
+        b.setTextColor(getColor(if (on) R.color.bg else R.color.fg))
+    }
+
+    private fun refreshAccess() {
+        val media = Access.hasMediaAccess(this)
+        val usage = Access.hasUsageAccess(this)
+        accessCard.visibility = if (media && usage) View.GONE else View.VISIBLE
+        mediaAccessState.text = if (media) "已開啟" else "未開啟"
+        mediaAccessState.setTextColor(getColor(if (media) R.color.cut else R.color.boost))
+        mediaAccessBtn.visibility = if (media) View.GONE else View.VISIBLE
+        usageAccessState.text = if (usage) "已開啟" else "未開啟"
+        usageAccessState.setTextColor(getColor(if (usage) R.color.cut else R.color.boost))
+        usageAccessBtn.visibility = if (usage) View.GONE else View.VISIBLE
     }
 
     private fun buildPresets() {
@@ -275,7 +390,7 @@ class MainActivity : Activity() {
                 minWidth = 0; minimumWidth = 0
                 setPadding(0, 0, 0, 0)
                 stateListAnimator = null
-                setOnClickListener { edit { it.copy(gain = v) } }
+                setOnClickListener { editGain { v } }
             }
             val lp = LinearLayout.LayoutParams(0, dp(44), 1f)
             if (i > 0) lp.marginStart = dp(6)
@@ -284,10 +399,12 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun divider() = View(this).apply { setBackgroundColor(getColor(R.color.line)) }
+
     private fun renderDeviceList(currentKey: String, editing: String) {
         deviceList.removeAllViews()
-        val all = store.all()
-        if (all.isEmpty()) {
+        val devices = store.devices()
+        if (devices.isEmpty()) {
             deviceList.addView(TextView(this).apply {
                 text = getString(R.string.no_devices)
                 setTextColor(getColor(R.color.muted))
@@ -295,47 +412,82 @@ class MainActivity : Activity() {
             })
             return
         }
-        all.forEachIndexed { i, p ->
-            if (i > 0) deviceList.addView(View(this).apply { setBackgroundColor(getColor(R.color.line)) },
-                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)))
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(16), dp(10), dp(8), dp(10))
-                minimumHeight = dp(56)
-                isClickable = true
-                setBackgroundResource(TypedValue().also {
-                    theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true)
-                }.resourceId)
-                setOnClickListener { editingKey = if (p.key == currentKey) null else p.key; refresh() }
+        val liveApp = VolumeService.currentApp
+        devices.forEachIndexed { i, d ->
+            if (i > 0) deviceList.addView(divider(), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)))
+            val isCur = d.key == currentKey
+            val parts = mutableListOf(
+                if (d.enabled) "預設 ${GainMath.pctText(d.gain)}" else "原音",
+                if (d.limiter) "防爆音" else "無限幅",
+            )
+            if (store.rememberSysVolume && d.sysVolume >= 0) parts += "系統音量 ${d.sysVolume}"
+            deviceList.addView(listRow(
+                title = d.name + if (isCur) "　· 使用中" else "",
+                sub = parts.joinToString(" · "),
+                indent = 0,
+                bold = d.key == editing,
+                deletable = !isCur,
+                onClick = {
+                    if (isCur) { pinnedDevice = null; pinnedApp = null; useDeviceDefault = true }
+                    else { pinnedDevice = d.key; pinnedApp = null }
+                    refresh()
+                },
+                onDelete = { store.delete(d.key); if (pinnedDevice == d.key) { pinnedDevice = null; pinnedApp = null } },
+            ))
+            store.appsFor(d.key).forEach { a ->
+                val live = isCur && a.app == liveApp
+                deviceList.addView(listRow(
+                    title = a.appLabel.ifEmpty { a.app } + if (live) "　· 播放中" else "",
+                    sub = "${GainMath.pctText(a.gain)}（${GainMath.dbText(a.gain)}）",
+                    indent = 16,
+                    bold = a.key == editing,
+                    deletable = true,
+                    onClick = {
+                        if (live) { pinnedDevice = null; pinnedApp = null; useDeviceDefault = false }
+                        else { pinnedDevice = d.key; pinnedApp = a.app }
+                        refresh()
+                    },
+                    onDelete = { store.delete(a.key); if (pinnedApp == a.app && pinnedDevice == d.key) pinnedApp = null },
+                ))
             }
-            val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            texts.addView(TextView(this).apply {
-                text = p.name + if (p.key == currentKey) "　· 使用中" else ""
-                setTextColor(getColor(R.color.fg))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-                if (p.key == editing) setTypeface(typeface, Typeface.BOLD)
-            })
-            texts.addView(TextView(this).apply {
-                val parts = mutableListOf(
-                    if (p.enabled) "${GainMath.pctText(p.gain)}（${GainMath.dbText(p.gain)}）" else "原音",
-                    if (p.limiter) "防爆音" else "無限幅",
-                )
-                if (store.rememberSysVolume && p.sysVolume >= 0) parts += "系統音量 ${p.sysVolume}"
-                text = parts.joinToString(" · ")
-                setTextColor(getColor(R.color.muted))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            })
-            row.addView(texts, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            if (p.key != currentKey) {
-                row.addView(DeleteButton(p))
-            }
-            deviceList.addView(row)
         }
     }
 
+    private fun listRow(
+        title: String, sub: String, indent: Int, bold: Boolean, deletable: Boolean,
+        onClick: () -> Unit, onDelete: () -> Unit,
+    ): View {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(16 + indent), dp(10), dp(8), dp(10))
+            minimumHeight = dp(52)
+            isClickable = true
+            setBackgroundResource(TypedValue().also {
+                theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true)
+            }.resourceId)
+            setOnClickListener { onClick() }
+        }
+        val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        texts.addView(TextView(this).apply {
+            text = if (indent > 0) "└ $title" else title
+            setTextColor(getColor(R.color.fg))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, if (indent > 0) 14f else 15f)
+            if (bold) setTypeface(typeface, Typeface.BOLD)
+        })
+        texts.addView(TextView(this).apply {
+            text = sub
+            setTextColor(getColor(R.color.muted))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            if (indent > 0) setPadding(dp(14), 0, 0, 0)
+        })
+        row.addView(texts, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        if (deletable) row.addView(deleteButton(onDelete))
+        return row
+    }
+
     /** 兩段式刪除：先按一次變成「確定刪除」，再按一次才刪 */
-    private fun DeleteButton(p: Profile) = TextView(this).apply {
+    private fun deleteButton(onDelete: () -> Unit) = TextView(this).apply {
         text = "刪除"
         setTextColor(getColor(R.color.muted))
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
@@ -347,8 +499,8 @@ class MainActivity : Activity() {
                 armed = true; text = "確定刪除"; setTextColor(getColor(R.color.boost))
                 postDelayed({ if (armed) { armed = false; text = "刪除"; setTextColor(getColor(R.color.muted)) } }, 3000)
             } else {
-                store.delete(p.key)
-                if (editingKey == p.key) editingKey = null
+                onDelete()
+                VolumeService.send(this@MainActivity, VolumeService.ACTION_APPLY)
                 refresh()
             }
         }
